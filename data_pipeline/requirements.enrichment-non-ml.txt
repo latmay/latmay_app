@@ -1,0 +1,6 @@
+psycopg[binary]==3.2.3
+pycountry==24.6.1
+geonamescache==3.0.1
+numpy==1.26.4
+scikit-learn==1.5.1
+ftfy==6.3.1

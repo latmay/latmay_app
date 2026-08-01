@@ -1,0 +1,736 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  <title>Latmay</title>
+  <link rel="icon" type="image/png" href="{{ url_for('static', filename='assets/favicon-512.png') }}">
+
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="{{ url_for('static', filename='app.css') }}">
+  <script defer src="https://cloud.umami.is/script.js" data-website-id="de4b94c2-a018-499f-abb8-bbc584a71691"></script>
+</head>
+
+<body>
+  <div class="site-shell">
+
+  {% include "partials/navbar.html" %}
+
+  <main class="site-main mx-auto w-full max-w-7xl px-5 sm:px-6 lg:px-8">
+
+    <section class="grid items-center gap-10 py-14 lg:grid-cols-[1.08fr_.92fr] lg:gap-16 lg:py-20">
+      <div>
+        <div class="eyebrow mb-5 flex items-center gap-2"><span class="h-2 w-2 rounded-full bg-emerald-600"></span> Resume-first job discovery</div>
+        <h1 class="max-w-3xl text-4xl font-extrabold leading-[1.08] tracking-[-.04em] text-emerald-950 sm:text-6xl">Find work that fits your experience.</h1>
+        <p class="mt-6 max-w-2xl text-lg leading-8 text-slate-600 sm:text-xl">Latmay reads the full story of your resume to surface relevant roles—so you can spend less time searching and more time applying with confidence.</p>
+        <div class="mt-8 flex flex-wrap items-center gap-5 text-sm font-semibold text-slate-600">
+          <a href="#search" class="brand-bg rounded-xl px-5 py-3.5 text-white shadow-lg shadow-emerald-900/10 transition">Find my matches</a>
+          <span class="flex items-center gap-2"><svg class="h-5 w-5 text-emerald-600" viewBox="0 0 24 24" fill="none"><path d="m5 12 4 4L19 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>No signup required</span>
+          <a href="https://github.com/latmay/latmay_app" target="_blank" rel="noopener noreferrer" class="flex items-center gap-2 transition hover:text-emerald-700">
+            <svg class="h-5 w-5 text-emerald-600" viewBox="0 0 24 24" fill="none"><path d="m9 8-4 4 4 4M15 8l4 4-4 4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            Free &amp; open source
+          </a>
+        </div>
+      </div>
+      <div class="surface overflow-hidden rounded-3xl p-3">
+        <div class="rounded-2xl bg-emerald-950 p-6 text-white sm:p-8">
+          <p class="text-xs font-bold uppercase tracking-[.16em] text-emerald-300">How it works</p>
+          <div class="mt-7 space-y-6">
+            <div class="flex gap-4"><span class="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-white/10 font-bold">1</span><div><h2 class="font-display font-bold">Share your resume</h2><p class="mt-1 text-sm leading-6 text-emerald-100/70">Upload a PDF or DOCX, or paste your resume text.</p></div></div>
+            <div class="flex gap-4"><span class="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-white/10 font-bold">2</span><div><h2 class="font-display font-bold">We compare the details</h2><p class="mt-1 text-sm leading-6 text-emerald-100/70">Latmay evaluates experience, skills, responsibilities, and role requirements.</p></div></div>
+            <div class="flex gap-4"><span class="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-emerald-400 font-bold text-emerald-950">3</span><div><h2 class="font-display font-bold">Explore ranked matches</h2><p class="mt-1 text-sm leading-6 text-emerald-100/70">Review the strongest opportunities first and apply on the employer's site.</p></div></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    {% if error %}
+    <div class="mb-5 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-700">
+      {{ error }}
+    </div>
+    {% endif %}
+
+    {% if notice %}
+    <div class="mb-5 rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-medium text-emerald-700">
+      {{ notice }}
+    </div>
+    {% endif %}
+
+    <form id="search"
+      method="post"
+      action="/rank"
+      enctype="multipart/form-data"
+      onsubmit="return showLoading();"
+      class="surface scroll-mt-28 rounded-3xl p-5 sm:p-8 lg:p-10"
+    >
+      <input id="resume_input_mode" name="resume_input_mode" type="hidden" value="upload">
+
+      <div class="mb-8 max-w-2xl">
+        <div class="eyebrow mb-3">Start your search</div>
+        <h2 class="text-2xl font-bold tracking-tight text-emerald-950 sm:text-3xl">Tell us about your experience</h2>
+        <p class="mt-2 text-slate-600">Your resume is used to generate this search. No account is needed.</p>
+      </div>
+
+      <section id="saved_resume_panel" class="mb-6 hidden rounded-2xl border border-emerald-200 bg-emerald-50 p-4 sm:p-5">
+        <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <h2 class="font-semibold text-emerald-950">Saved resume profile</h2>
+            <p id="saved_resume_status" class="mt-1 text-sm text-emerald-800">Checking your saved profile...</p>
+            <p id="saved_resume_technologies" class="mt-1 text-xs text-emerald-700"></p>
+          </div>
+          <div class="flex flex-wrap gap-2">
+            <button id="save_resume_profile_button" type="button" class="rounded-lg bg-emerald-700 px-3 py-2 text-sm font-semibold text-white hover:bg-emerald-800">Process and save current resume</button>
+            <button id="delete_resume_profile_button" type="button" class="hidden rounded-lg border border-red-300 bg-white px-3 py-2 text-sm font-semibold text-red-700 hover:bg-red-50">Delete saved profile</button>
+          </div>
+        </div>
+        <label id="use_saved_resume_label" class="mt-4 hidden items-center gap-3 rounded-lg border border-emerald-200 bg-white px-3 py-3 text-sm font-medium text-emerald-950">
+          <input id="use_saved_resume" name="use_saved_resume" type="checkbox" class="h-4 w-4 rounded border-slate-300 text-emerald-700 focus:ring-emerald-600">
+          <span>Use my saved profile for this ranking (no resume embedding at Rank time)</span>
+        </label>
+      </section>
+      <section class="space-y-5">
+        <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <h2 class="text-base font-semibold text-slate-900">
+            Resume input
+          </h2>
+
+          <div class="inline-flex w-full rounded-lg border border-slate-300 bg-slate-100 p-1 sm:w-auto">
+            <button
+              id="upload_mode_button"
+              type="button"
+              class="flex-1 rounded-md px-3 py-2 text-sm font-semibold text-slate-700 transition sm:flex-none"
+              onclick="setResumeMode('upload')"
+            >
+              Upload PDF/DOCX
+            </button>
+
+            <button
+              id="paste_mode_button"
+              type="button"
+              class="flex-1 rounded-md px-3 py-2 text-sm font-semibold text-slate-700 transition sm:flex-none"
+              onclick="setResumeMode('paste')"
+            >
+              Paste text
+            </button>
+          </div>
+        </div>
+
+        <div id="upload_resume_panel" class="upload-zone rounded-2xl p-4 sm:p-6">
+          <input
+            id="resume_file"
+            name="resume_file"
+            type="file"
+            accept=".pdf,.docx,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+            class="w-full rounded-lg border border-slate-300 bg-white px-4 py-3 text-sm text-slate-700 shadow-sm outline-none transition file:mr-4 file:rounded-md file:border-0 file:bg-slate-100 file:px-3 file:py-2 file:text-sm file:font-semibold file:text-slate-700 hover:file:bg-slate-200 focus:border-indigo-500 focus:ring-4 focus:ring-indigo-100"
+          >
+
+          <p class="mt-3 text-xs text-slate-500">
+            PDF or DOCX, up to {{ max_resume_file_mb }} MB.
+          </p>
+        </div>
+
+        <div id="paste_resume_panel" class="hidden">
+          <textarea
+            id="resume_text"
+            name="resume_text"
+            placeholder="Paste your resume here..."
+            class="min-h-[300px] w-full rounded-lg border border-slate-300 bg-slate-50 px-4 py-3 font-mono text-sm leading-6 text-slate-800 shadow-sm outline-none transition focus:border-indigo-500 focus:ring-4 focus:ring-indigo-100"
+          >{{ resume_text or "" }}</textarea>
+        </div>
+      </section>
+
+      <section class="mt-6 border-t border-slate-200 pt-5">
+        <div class="mb-3 flex items-center justify-between">
+          <h2 class="text-base font-semibold text-slate-900">
+            Filters
+          </h2>
+        </div>
+
+        <div class="grid gap-4 md:grid-cols-3">
+          <div>
+            <label for="country" class="mb-1.5 block text-sm font-medium text-slate-700">
+              Country
+            </label>
+
+            <input
+              id="country"
+              name="country"
+              type="text"
+              value="{{ country if country is not none else 'United States' }}"
+              class="w-full rounded-lg border border-slate-300 bg-white px-3 py-2.5 text-sm shadow-sm outline-none transition focus:border-indigo-500 focus:ring-4 focus:ring-indigo-100"
+            >
+          </div>
+
+          <div>
+            <label for="state" class="mb-1.5 block text-sm font-medium text-slate-700">
+              State
+            </label>
+
+            <input
+              id="state"
+              name="state"
+              type="text"
+              placeholder="Any"
+              value="{{ state or '' }}"
+              class="w-full rounded-lg border border-slate-300 bg-white px-3 py-2.5 text-sm shadow-sm outline-none transition focus:border-indigo-500 focus:ring-4 focus:ring-indigo-100"
+            >
+          </div>
+
+          {% if enable_max_yoe_filter %}
+          <div>
+            <label for="max_required_yoe" class="mb-1.5 block text-sm font-medium text-slate-700">
+              Max YOE
+            </label>
+
+            <input
+              id="max_required_yoe"
+              name="max_required_yoe"
+              type="number"
+              min="0"
+              step="0.5"
+              placeholder="Any"
+              value="{{ max_required_yoe if max_required_yoe is not none else '' }}"
+              class="w-full rounded-lg border border-slate-300 bg-white px-3 py-2.5 text-sm shadow-sm outline-none transition focus:border-indigo-500 focus:ring-4 focus:ring-indigo-100"
+            >
+          </div>
+          {% endif %}
+        </div>
+
+        <div class="mt-4 grid gap-3 md:grid-cols-2">
+          <label class="flex items-center gap-3 rounded-lg border border-slate-200 bg-slate-50 px-3 py-3 text-sm font-medium text-slate-700">
+            <input
+              id="exclude_security_clearance"
+              name="exclude_security_clearance"
+              type="checkbox"
+              {% if exclude_security_clearance %}checked{% endif %}
+              class="h-4 w-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
+            >
+            <span>Exclude security clearance</span>
+          </label>
+
+          <label class="flex items-center gap-3 rounded-lg border border-slate-200 bg-slate-50 px-3 py-3 text-sm font-medium text-slate-700">
+            <input
+              id="require_recent_posted"
+              name="require_recent_posted"
+              type="checkbox"
+              {% if require_recent_posted %}checked{% endif %}
+              class="h-4 w-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
+            >
+            <span>Only jobs posted in past {{ recent_posted_hours }} hours</span>
+          </label>
+        </div>
+      </section>
+
+      <section class="mt-6 flex flex-col gap-3 border-t border-slate-200 pt-5 sm:flex-row sm:items-center">
+        <button
+          id="submit_button"
+          type="submit"
+          class="inline-flex justify-center rounded-lg bg-indigo-600 px-5 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-indigo-500 active:bg-indigo-700 disabled:cursor-not-allowed disabled:bg-indigo-400"
+        >
+          Find my job matches
+        </button>
+
+        <div id="loading_message" class="hidden text-sm text-slate-500">
+          Comparing your experience with current openings. This usually takes about two minutes.
+        </div>
+
+        <p id="expectation_message" class="text-sm text-slate-500">
+          Matching usually takes one to two minutes
+        </p>
+      </section>
+    </form>
+
+    <section class="trust-grid mt-10 grid gap-4 rounded-3xl border border-emerald-950/10 bg-white/60 p-6 text-center sm:grid-cols-3 sm:p-8">
+      <div class="px-4"><p class="font-display font-bold text-emerald-950">Resume-first matching</p><p class="mt-1 text-sm text-slate-500">Context beyond simple keywords</p></div>
+      <div class="px-4"><p class="font-display font-bold text-emerald-950">No signup required</p><p class="mt-1 text-sm text-slate-500">Start searching immediately</p></div>
+      <div class="px-4"><p class="font-display font-bold text-emerald-950">Direct job links</p><p class="mt-1 text-sm text-slate-500">Apply on the employer's site</p></div>
+    </section>
+
+    <section id="recent_jobs" class="mt-14 mb-10">
+      <div class="mb-5">
+        <div class="eyebrow mb-2">Fresh listings</div>
+        <h2 class="text-2xl font-bold tracking-tight text-emerald-950 sm:text-3xl">Recently posted roles</h2>
+        <p class="mt-2 text-slate-600">Loaded straight from our latest job data.</p>
+      </div>
+
+      <div id="recent_jobs_list" class="space-y-4"></div>
+
+      <div class="mt-6 flex flex-col items-center gap-3">
+        <button
+          id="recent_jobs_load_more"
+          type="button"
+          class="rounded-lg border border-slate-300 bg-white px-5 py-2.5 text-sm font-semibold text-slate-700 shadow-sm transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
+        >
+          Load more jobs
+        </button>
+        <p id="recent_jobs_status" class="text-sm text-slate-500"></p>
+      </div>
+    </section>
+  </main>
+
+  {% include "partials/footer.html" %}
+  </div>
+
+  <div id="auth_modal" class="fixed inset-0 z-[60] hidden items-center justify-center bg-slate-950/60 p-4" role="dialog" aria-modal="true" aria-labelledby="auth_title">
+    <div class="w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl sm:p-8">
+      <div class="flex items-start justify-between gap-4">
+        <div>
+          <h2 id="auth_title" class="text-2xl font-bold text-emerald-950">Log in</h2>
+          <p id="auth_subtitle" class="mt-1 text-sm text-slate-500">Access your Latmay account.</p>
+        </div>
+        <button id="auth_close_button" type="button" class="rounded-lg p-2 text-slate-500 hover:bg-slate-100" aria-label="Close login">&#10005;</button>
+      </div>
+
+      <div id="auth_message" class="mt-4 hidden rounded-lg px-3 py-2 text-sm" role="status"></div>
+
+      <button id="auth_google_button" type="button" class="mt-5 flex w-full items-center justify-center gap-2 rounded-lg border border-slate-300 bg-white px-4 py-3 text-sm font-semibold text-slate-700 hover:bg-slate-50">
+        Continue with Google
+      </button>
+
+      <div class="my-5 flex items-center gap-3 text-xs uppercase tracking-wide text-slate-400"><span class="h-px flex-1 bg-slate-200"></span>or<span class="h-px flex-1 bg-slate-200"></span></div>
+
+      <form id="auth_email_form" class="space-y-4">
+        <div>
+          <label for="auth_email" class="mb-1.5 block text-sm font-medium text-slate-700">Email</label>
+          <input id="auth_email" type="email" autocomplete="email" required class="w-full rounded-lg border border-slate-300 px-3 py-2.5 text-sm outline-none focus:border-indigo-500 focus:ring-4 focus:ring-indigo-100">
+        </div>
+        <div>
+          <label for="auth_password" class="mb-1.5 block text-sm font-medium text-slate-700">Password</label>
+          <input id="auth_password" type="password" autocomplete="current-password" minlength="6" required class="w-full rounded-lg border border-slate-300 px-3 py-2.5 text-sm outline-none focus:border-indigo-500 focus:ring-4 focus:ring-indigo-100">
+        </div>
+        <button id="auth_submit_button" type="submit" class="w-full rounded-lg bg-emerald-700 px-4 py-3 text-sm font-semibold text-white hover:bg-emerald-800">Log in</button>
+      </form>
+
+      <div class="mt-4 flex items-center justify-between gap-3 text-sm">
+        <button id="auth_forgot_button" type="button" class="font-medium text-indigo-700 hover:underline">Forgot password?</button>
+        <button id="auth_toggle_button" type="button" class="font-medium text-emerald-700 hover:underline">Create an account</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    function setResumeMode(mode) {
+      const uploadPanel = document.getElementById("upload_resume_panel");
+      const pastePanel = document.getElementById("paste_resume_panel");
+      const uploadButton = document.getElementById("upload_mode_button");
+      const pasteButton = document.getElementById("paste_mode_button");
+      const modeInput = document.getElementById("resume_input_mode");
+
+      const isUpload = mode === "upload";
+      modeInput.value = mode;
+      uploadPanel.classList.toggle("hidden", !isUpload);
+      pastePanel.classList.toggle("hidden", isUpload);
+
+      uploadButton.classList.toggle("bg-white", isUpload);
+      uploadButton.classList.toggle("text-slate-950", isUpload);
+      uploadButton.classList.toggle("shadow-sm", isUpload);
+      pasteButton.classList.toggle("bg-white", !isUpload);
+      pasteButton.classList.toggle("text-slate-950", !isUpload);
+      pasteButton.classList.toggle("shadow-sm", !isUpload);
+    }
+
+    function showLoading() {
+      const btn = document.getElementById("submit_button");
+      const msg = document.getElementById("loading_message");
+      const expectation = document.getElementById("expectation_message");
+
+      if (btn) {
+        btn.disabled = true;
+        btn.innerText = "Ranking jobs...";
+      }
+
+      if (msg) {
+        msg.classList.remove("hidden");
+      }
+
+      if (expectation) {
+        expectation.classList.add("hidden");
+      }
+
+      return true;
+    }
+
+    setResumeMode({% if resume_text %}"paste"{% else %}"upload"{% endif %});
+  </script>
+
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.10.0/firebase-app.js";
+    import {
+      browserLocalPersistence,
+      createUserWithEmailAndPassword,
+      getAuth,
+      GoogleAuthProvider,
+      onAuthStateChanged,
+      sendPasswordResetEmail,
+      setPersistence,
+      signInWithEmailAndPassword,
+      signInWithPopup,
+      signOut,
+    } from "https://www.gstatic.com/firebasejs/11.10.0/firebase-auth.js";
+
+    const firebaseConfig = {{ firebase_web_config | tojson }};
+    const authAvailable = Boolean(firebaseConfig.apiKey);
+    const auth = authAvailable ? getAuth(initializeApp(firebaseConfig)) : null;
+    const googleProvider = new GoogleAuthProvider();
+    let isSignup = false;
+
+    const modal = document.getElementById("auth_modal");
+    const openButton = document.getElementById("auth_open_button");
+    const userControls = document.getElementById("auth_user_controls");
+    const userEmail = document.getElementById("auth_user_email");
+    const title = document.getElementById("auth_title");
+    const subtitle = document.getElementById("auth_subtitle");
+    const submitButton = document.getElementById("auth_submit_button");
+    const toggleButton = document.getElementById("auth_toggle_button");
+    const forgotButton = document.getElementById("auth_forgot_button");
+    const message = document.getElementById("auth_message");
+    const savedResumePanel = document.getElementById("saved_resume_panel");
+    const savedResumeStatus = document.getElementById("saved_resume_status");
+    const savedResumeTechnologies = document.getElementById("saved_resume_technologies");
+    const useSavedResumeLabel = document.getElementById("use_saved_resume_label");
+    const useSavedResume = document.getElementById("use_saved_resume");
+    const deleteResumeProfileButton = document.getElementById("delete_resume_profile_button");
+    const deleteAccountButton = document.getElementById("auth_delete_account_button");
+
+    async function authenticatedFetch(url, options = {}) {
+      if (!auth?.currentUser) throw new Error("Log in first.");
+      const headers = new Headers(options.headers || {});
+      headers.set("Authorization", `Bearer ${await auth.currentUser.getIdToken()}`);
+      return fetch(url, { ...options, headers });
+    }
+
+    async function refreshSavedResumeStatus() {
+      if (!auth?.currentUser) {
+        savedResumePanel.classList.add("hidden");
+        useSavedResume.checked = false;
+        return;
+      }
+      savedResumePanel.classList.remove("hidden");
+      const response = await authenticatedFetch("/resume-profile");
+      const payload = await response.json();
+      if (!response.ok) throw new Error(payload.error || "Could not load saved resume status.");
+      const usable = Boolean(payload.exists && payload.current);
+      savedResumeStatus.textContent = !payload.exists
+        ? "No saved profile yet. Choose a resume below, then process and save it."
+        : payload.current
+          ? "Your saved profile is ready to rank without embedding the resume again."
+          : "Your profile uses an older model or preprocessing version. Process the resume again.";
+      const terms = payload.technologies || [];
+      savedResumeTechnologies.textContent = terms.length ? `Detected technologies: ${terms.join(", ")}` : "";
+      useSavedResumeLabel.classList.toggle("hidden", !usable);
+      useSavedResumeLabel.classList.toggle("flex", usable);
+      deleteResumeProfileButton.classList.toggle("hidden", !payload.exists);
+      if (!usable) useSavedResume.checked = false;
+    }
+
+    function showAuthMessage(text, isError = false) {
+      message.textContent = text;
+      message.classList.remove("hidden", "bg-red-50", "text-red-700", "bg-emerald-50", "text-emerald-700");
+      message.classList.add(isError ? "bg-red-50" : "bg-emerald-50", isError ? "text-red-700" : "text-emerald-700");
+    }
+
+    function friendlyAuthError(error) {
+      const messages = {
+        "auth/api-key-not-valid": "Firebase authentication is not configured correctly.",
+        "auth/api-key-not-valid.-please-pass-a-valid-api-key.": "Firebase authentication is not configured correctly.",
+        "auth/configuration-not-found": "Firebase Authentication is not configured for this project.",
+        "auth/email-already-in-use": "An account already exists for that email.",
+        "auth/internal-error": "Firebase Authentication returned an internal error.",
+        "auth/invalid-api-key": "Firebase authentication is not configured correctly.",
+        "auth/invalid-credential": "The email or password is incorrect.",
+        "auth/invalid-email": "Enter a valid email address.",
+        "auth/network-request-failed": "Could not contact Firebase Authentication. Check your connection and try again.",
+        "auth/operation-not-allowed": "This sign-in method is not enabled.",
+        "auth/popup-closed-by-user": "Google sign-in was closed before completion.",
+        "auth/too-many-requests": "Too many attempts. Please wait and try again.",
+        "auth/unauthorized-domain": "This domain is not authorized for Firebase login.",
+        "auth/weak-password": "Choose a password with at least six characters.",
+      };
+      return messages[error?.code] || "Authentication failed. Please try again.";
+    }
+
+    function logFirebaseAuthFailure(operation, error) {
+      // Firebase auth codes and exception names are diagnostic identifiers. Do not
+      // log messages, requests, URLs, email addresses, passwords, or ID tokens here.
+      const safeIdentifier = (value, fallback) => {
+        const text = typeof value === "string" ? value : "";
+        return /^[A-Za-z0-9_./-]{1,100}$/.test(text) ? text : fallback;
+      };
+      console.error("Firebase authentication failed", {
+        operation: safeIdentifier(operation, "unknown"),
+        code: safeIdentifier(error?.code, "unknown"),
+        name: safeIdentifier(error?.name, "unknown"),
+      });
+    }
+
+    function openAuthModal() {
+      modal.classList.remove("hidden");
+      modal.classList.add("flex");
+      document.getElementById("auth_email").focus();
+    }
+
+    function closeAuthModal() {
+      modal.classList.add("hidden");
+      modal.classList.remove("flex");
+    }
+
+    function updateAuthMode() {
+      title.textContent = isSignup ? "Create an account" : "Log in";
+      subtitle.textContent = isSignup ? "Sign up with email or Google." : "Access your Latmay account.";
+      submitButton.textContent = isSignup ? "Sign up" : "Log in";
+      toggleButton.textContent = isSignup ? "Already have an account?" : "Create an account";
+      forgotButton.classList.toggle("invisible", isSignup);
+      document.getElementById("auth_password").autocomplete = isSignup ? "new-password" : "current-password";
+      message.classList.add("hidden");
+    }
+
+    if (!authAvailable) {
+      openButton.addEventListener("click", () => {
+        openAuthModal();
+        showAuthMessage("Login is not configured on this deployment.", true);
+      });
+    } else {
+      await setPersistence(auth, browserLocalPersistence);
+
+      onAuthStateChanged(auth, (user) => {
+        openButton.classList.toggle("hidden", Boolean(user));
+        userControls.classList.toggle("hidden", !user);
+        userControls.classList.toggle("flex", Boolean(user));
+        userEmail.textContent = user?.email || "Signed in";
+        if (user) closeAuthModal();
+        refreshSavedResumeStatus().catch((error) => {
+          savedResumeStatus.textContent = error.message;
+        });
+      });
+
+      openButton.addEventListener("click", openAuthModal);
+      document.getElementById("auth_google_button").addEventListener("click", async () => {
+        try {
+          await signInWithPopup(auth, googleProvider);
+        } catch (error) {
+          logFirebaseAuthFailure("google-sign-in", error);
+          showAuthMessage(friendlyAuthError(error), true);
+        }
+      });
+
+      document.getElementById("auth_email_form").addEventListener("submit", async (event) => {
+        event.preventDefault();
+        const email = document.getElementById("auth_email").value.trim();
+        const password = document.getElementById("auth_password").value;
+        submitButton.disabled = true;
+        try {
+          if (isSignup) {
+            await createUserWithEmailAndPassword(auth, email, password);
+          } else {
+            await signInWithEmailAndPassword(auth, email, password);
+          }
+        } catch (error) {
+          logFirebaseAuthFailure(isSignup ? "email-sign-up" : "email-sign-in", error);
+          showAuthMessage(friendlyAuthError(error), true);
+        } finally {
+          submitButton.disabled = false;
+        }
+      });
+
+      forgotButton.addEventListener("click", async () => {
+        const email = document.getElementById("auth_email").value.trim();
+        if (!email) {
+          showAuthMessage("Enter your email address first.", true);
+          return;
+        }
+        try {
+          await sendPasswordResetEmail(auth, email);
+          showAuthMessage("Password reset email sent.");
+        } catch (error) {
+          logFirebaseAuthFailure("password-reset", error);
+          showAuthMessage(friendlyAuthError(error), true);
+        }
+      });
+
+      document.getElementById("auth_logout_button").addEventListener("click", () => signOut(auth));
+
+      deleteAccountButton.addEventListener("click", async () => {
+        const confirmed = window.confirm(
+          "Permanently delete your Latmay account and saved resume profile? This cannot be undone."
+        );
+        if (!confirmed) return;
+
+        deleteAccountButton.disabled = true;
+        try {
+          const response = await authenticatedFetch("/account", { method: "DELETE" });
+          const payload = await response.json();
+          if (!response.ok) {
+            window.alert(payload.error || "Could not delete your account.");
+            return;
+          }
+          await signOut(auth);
+          window.location.reload();
+        } catch (_) {
+          window.alert("Could not delete your account. Please try again.");
+        } finally {
+          deleteAccountButton.disabled = false;
+        }
+      });
+
+      document.getElementById("save_resume_profile_button").addEventListener("click", async () => {
+        const button = document.getElementById("save_resume_profile_button");
+        button.disabled = true;
+        savedResumeStatus.textContent = "Processing resume and creating cached ranking inputs...";
+        try {
+          const response = await authenticatedFetch("/resume-profile", {
+            method: "POST",
+            body: new FormData(document.getElementById("search")),
+          });
+          const payload = await response.json();
+          if (!response.ok) throw new Error(payload.error || "Could not save resume profile.");
+          await refreshSavedResumeStatus();
+          useSavedResume.checked = true;
+        } catch (error) {
+          savedResumeStatus.textContent = error.message;
+        } finally {
+          button.disabled = false;
+        }
+      });
+
+      deleteResumeProfileButton.addEventListener("click", async () => {
+        if (!window.confirm("Delete your saved resume embeddings and detected technologies?")) return;
+        const response = await authenticatedFetch("/resume-profile", { method: "DELETE" });
+        const payload = await response.json();
+        if (!response.ok) {
+          savedResumeStatus.textContent = payload.error || "Could not delete saved profile.";
+          return;
+        }
+        await refreshSavedResumeStatus();
+      });
+    }
+
+    document.getElementById("auth_close_button").addEventListener("click", closeAuthModal);
+    toggleButton.addEventListener("click", () => { isSignup = !isSignup; updateAuthMode(); });
+    modal.addEventListener("click", (event) => { if (event.target === modal) closeAuthModal(); });
+    document.addEventListener("keydown", (event) => { if (event.key === "Escape") closeAuthModal(); });
+
+    document.getElementById("search").addEventListener("submit", async (event) => {
+      event.preventDefault();
+      showLoading();
+      const headers = {};
+      if (auth?.currentUser) {
+        headers.Authorization = `Bearer ${await auth.currentUser.getIdToken()}`;
+      }
+
+      try {
+        const response = await fetch(event.currentTarget.action, {
+          method: "POST",
+          body: new FormData(event.currentTarget),
+          headers,
+        });
+        if (response.status === 401) {
+          throw new Error("Your login expired. Please log in again.");
+        }
+        const html = await response.text();
+        document.open();
+        document.write(html);
+        document.close();
+      } catch (error) {
+        const btn = document.getElementById("submit_button");
+        btn.disabled = false;
+        btn.innerText = "Find my job matches";
+        document.getElementById("loading_message").classList.add("hidden");
+        document.getElementById("expectation_message").classList.remove("hidden");
+        window.alert(error.message || "Could not submit the ranking request.");
+      }
+    });
+  </script>
+
+  <script>
+    (function () {
+      const listEl = document.getElementById("recent_jobs_list");
+      const statusEl = document.getElementById("recent_jobs_status");
+      const loadMoreButton = document.getElementById("recent_jobs_load_more");
+      if (!listEl || !statusEl || !loadMoreButton) return;
+
+      const BATCH_SIZE = 12;
+
+      let nextShardIndex = 0;
+      let hasMoreShards = true;
+      let queue = [];
+      let loading = false;
+      let exhausted = false;
+
+      function escapeHtml(value) {
+        const div = document.createElement("div");
+        div.textContent = value == null ? "" : String(value);
+        return div.innerHTML;
+      }
+
+      function renderJob(job) {
+        const article = document.createElement("article");
+        article.className = "job-card rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6";
+        const meta = [job.company, job.location].filter(Boolean).map(escapeHtml).join(" &middot; ");
+        article.innerHTML = `
+          <div class="flex flex-wrap items-start justify-between gap-3">
+            <div>
+              <h3 class="text-lg font-bold text-emerald-950">${escapeHtml(job.title || "Untitled role")}</h3>
+              ${meta ? `<p class="mt-1 text-sm text-slate-600">${meta}</p>` : ""}
+            </div>
+            ${job.posted_display ? `<span class="shrink-0 rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-600">${escapeHtml(job.posted_display)}</span>` : ""}
+          </div>
+          ${job.url ? `<a href="${escapeHtml(job.url)}" target="_blank" rel="noopener noreferrer" class="brand-bg mt-4 inline-flex items-center justify-center rounded-lg px-4 py-2 text-sm font-semibold text-white">View job</a>` : ""}
+        `;
+        listEl.appendChild(article);
+      }
+
+      function finish(message) {
+        exhausted = true;
+        statusEl.textContent = message;
+        loadMoreButton.classList.add("hidden");
+      }
+
+      async function loadMore() {
+        if (loading || exhausted) return;
+        loading = true;
+        loadMoreButton.disabled = true;
+        loadMoreButton.textContent = "Loading...";
+        try {
+          if (queue.length === 0) {
+            if (!hasMoreShards) {
+              finish(listEl.children.length ? "You've reached the end of recent listings." : "No recent jobs available right now.");
+              return;
+            }
+            const response = await fetch(`/api/recent-jobs?shard=${nextShardIndex}`);
+            if (!response.ok) throw new Error("request failed");
+            const page = await response.json();
+            queue = page.jobs || [];
+            hasMoreShards = Boolean(page.has_more);
+            nextShardIndex += 1;
+            if (queue.length === 0 && !hasMoreShards) {
+              finish(listEl.children.length ? "You've reached the end of recent listings." : "No recent jobs available right now.");
+              return;
+            }
+          }
+
+          queue.splice(0, BATCH_SIZE).forEach(renderJob);
+          statusEl.textContent = "";
+          if (queue.length === 0 && !hasMoreShards) {
+            finish("You've reached the end of recent listings.");
+          }
+        } catch (error) {
+          statusEl.textContent = "Could not load more jobs right now.";
+        } finally {
+          loading = false;
+          if (!exhausted) {
+            loadMoreButton.disabled = false;
+            loadMoreButton.textContent = "Load more jobs";
+          }
+        }
+      }
+
+      loadMoreButton.addEventListener("click", loadMore);
+      // Populate the first batch automatically so the section isn't empty on load;
+      // every batch after that requires an explicit click.
+      loadMore();
+    })();
+  </script>
+
+</body>
+</html>

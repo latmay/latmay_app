@@ -1,0 +1,15 @@
+ARG ML_BASE_IMAGE=latmay-ml-base:latest
+FROM ${ML_BASE_IMAGE}
+
+WORKDIR /app
+
+ENV PYTHONPATH=/app
+ENV LOCAL_FILES_ONLY=true
+ENV MODEL_CACHE_DIR=/app/model_cache
+
+COPY data_pipeline/requirements.enrichment.txt /tmp/requirements.enrichment.txt
+RUN pip install --no-cache-dir -r /tmp/requirements.enrichment.txt
+
+COPY data_pipeline /app/data_pipeline
+
+CMD ["python", "-m", "data_pipeline.enrichment.main_enrich_embeddings"]

@@ -1,0 +1,431 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  <title>Latmay Results</title>
+  <link rel="icon" type="image/png" href="{{ url_for('static', filename='assets/favicon-512.png') }}">
+
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="{{ url_for('static', filename='app.css') }}">
+  <script defer src="https://cloud.umami.is/script.js" data-website-id="de4b94c2-a018-499f-abb8-bbc584a71691"></script>
+</head>
+
+<body><div class="site-shell">
+
+  {% include "partials/navbar.html" %}
+
+  <main class="site-main mx-auto w-full max-w-7xl px-5 py-10 sm:px-6 lg:px-8 lg:py-14">
+
+    <!-- Header -->
+    <section class="mb-10 rounded-3xl bg-emerald-950 px-6 py-8 text-white shadow-xl shadow-emerald-950/10 sm:px-10 sm:py-10">
+
+      <div class="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-6">
+
+        <div>
+
+          <div class="mb-4 inline-flex items-center gap-2 rounded-full bg-white/10 px-4 py-1.5 text-sm font-semibold text-emerald-200">
+            <span class="h-2 w-2 rounded-full bg-emerald-400"></span> Ranking complete
+          </div>
+
+          <h1 class="mb-3 text-4xl font-extrabold tracking-tight sm:text-5xl">
+            Your strongest job matches
+          </h1>
+
+        </div>
+
+        <div>
+          <a href="/"
+             class="inline-flex items-center justify-center rounded-xl border border-white/20 bg-white px-5 py-3 text-sm font-bold text-emerald-950 shadow-sm transition hover:bg-emerald-50">
+            Run another search
+          </a>
+        </div>
+
+      </div>
+
+    </section>
+
+    {% set has_top_results = payload.results|length > 0 %}
+    {% set has_more_results = payload.more_results|default([])|length > 0 %}
+    {% set has_results = has_top_results or has_more_results %}
+
+    {% if show_ranking_diagnostics and has_results %}
+    <!-- Summary -->
+    <section class="grid md:grid-cols-5 gap-5 mb-10">
+
+      <div class="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm">
+        <div class="text-sm text-slate-500 mb-2">
+          Total jobs
+        </div>
+
+        <div class="text-3xl font-bold">
+          {{ payload.total_jobs }}
+        </div>
+      </div>
+
+      <div class="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm">
+        <div class="text-sm text-slate-500 mb-2">
+          Jobs after filters
+        </div>
+
+        <div class="text-3xl font-bold">
+          {{ payload.filtered_jobs }}
+        </div>
+      </div>
+
+      <div class="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm">
+        <div class="text-sm text-slate-500 mb-2">
+          Country filter
+        </div>
+
+        <div class="text-xl font-semibold">
+          {{ country or "None" }}
+        </div>
+      </div>
+
+      <div class="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm">
+        <div class="text-sm text-slate-500 mb-2">
+          State filter
+        </div>
+
+        <div class="text-xl font-semibold">
+          {{ state or "None" }}
+        </div>
+      </div>
+
+      {% if enable_max_yoe_filter %}
+      <div class="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm">
+        <div class="text-sm text-slate-500 mb-2">
+          Max required YOE
+        </div>
+
+        <div class="text-xl font-semibold">
+          {{ max_required_yoe if max_required_yoe is not none else "None" }}
+        </div>
+      </div>
+      {% endif %}
+
+    </section>
+    {% endif %}
+
+    {% if not has_results %}
+    <section class="surface rounded-3xl p-8 lg:p-10">
+      <div class="max-w-3xl">
+        <h2 class="text-2xl font-bold tracking-tight mb-3">
+          No matches found
+        </h2>
+
+        <p class="text-slate-600 leading-relaxed">
+          We're sorry, we did not find any jobs matching this particular resume. Please try again tomorrow.
+        </p>
+      </div>
+    </section>
+    {% else %}
+    {% set result_sections = [
+      {"title": "Top results", "groups": payload.grouped_results},
+      {"title": "More results", "groups": payload.more_grouped_results|default([])}
+    ] %}
+    {% for result_section in result_sections %}
+    {% if result_section.groups|length > 0 %}
+    <section class="mb-8">
+      <h2 class="mb-2 text-2xl font-extrabold tracking-tight text-emerald-950 sm:text-3xl">
+        {{ result_section.title }}
+      </h2>
+    </section>
+
+    <!-- Results -->
+    <section class="space-y-7 mb-12">
+
+      {% for group in result_section.groups %}
+
+      <details class="group job-card overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm" open>
+
+        <summary class="cursor-pointer list-none">
+          <div class="flex flex-col gap-5 bg-white p-6 transition group-open:border-b group-open:border-slate-100 hover:bg-emerald-50/40 lg:flex-row lg:items-center lg:justify-between">
+
+            <div>
+              <div class="flex flex-wrap items-center gap-3 mb-3">
+                <div class="inline-flex items-center rounded-full bg-emerald-700 px-4 py-1 text-sm font-semibold text-white">
+                  {{ group.rank_range }}
+                </div>
+
+                <div class="inline-flex items-center rounded-full bg-slate-100 text-slate-700 px-4 py-1 text-sm">
+                  {{ group.result_count }} {{ "match" if group.result_count == 1 else "matches" }}
+                </div>
+              </div>
+
+              <h2 class="text-2xl font-extrabold tracking-tight text-emerald-950 sm:text-3xl">
+                {{ group.company }}
+              </h2>
+            </div>
+
+            <div class="flex items-center gap-3 text-sm font-semibold text-slate-500">
+              <span>Company results</span>
+              <span class="text-slate-400 transition group-open:rotate-180">v</span>
+            </div>
+
+          </div>
+        </summary>
+
+        <div class="divide-y divide-slate-100">
+
+          {% for item in group.results %}
+
+          <article class="p-6 lg:p-8">
+
+            <!-- Top Section -->
+            <div class="flex flex-col xl:flex-row xl:items-start xl:justify-between gap-6">
+
+              <!-- Left -->
+              <div class="flex-1">
+
+                <div class="flex flex-wrap items-center gap-3 mb-4">
+
+                  <div class="inline-flex items-center rounded-full bg-emerald-100 px-4 py-1 text-sm font-semibold text-emerald-800">
+                    Rank #{{ item.final_rank }}
+                  </div>
+
+                  {% if item.min_years_experience %}
+                  <div class="inline-flex items-center rounded-full bg-slate-100 text-slate-700 px-4 py-1 text-sm">
+                    {{ item.min_years_experience }}+ years
+                  </div>
+                  {% endif %}
+
+                </div>
+
+                <h3 class="text-2xl font-bold tracking-tight mb-3">
+                  {{ item.title }}
+                </h3>
+
+                <div class="space-y-2 text-slate-600">
+
+                  <p>
+                    <span class="font-semibold text-slate-800">Location:</span>
+                    {{ item.location }}
+                  </p>
+
+                  {% if item.posted_at_display or item.posted_at %}
+                  <p>
+                    <span class="font-semibold text-slate-800">Posted:</span>
+                    {{ item.posted_at_display or item.posted_at }}
+                  </p>
+                  {% endif %}
+
+                </div>
+
+              </div>
+
+              {% if show_ranking_diagnostics %}
+              <!-- Right -->
+              <div class="w-full xl:w-[340px]">
+
+                <div class="bg-slate-50 border border-slate-200 rounded-2xl p-5">
+
+                  <div class="text-sm font-semibold text-slate-700 mb-4">
+                    Ranking Metrics
+                  </div>
+
+                  <div class="space-y-4">
+
+                    <div>
+                      <div class="flex justify-between text-sm mb-1">
+                        <span class="text-slate-500">Stage 1 rank</span>
+                        <span class="font-semibold">{{ item.stage1_rank }}</span>
+                      </div>
+
+                      <div class="text-xs text-slate-500">
+                        Word Wasserstein:
+                        {% if item.stage1_word_wasserstein_distance is not none %}
+                        {{ "%.6f"|format(item.stage1_word_wasserstein_distance) }}
+                        {% else %}
+                        N/A
+                        {% endif %}
+                      </div>
+                    </div>
+
+                    <div>
+                      <div class="flex justify-between text-sm mb-1">
+                        <span class="text-slate-500">Stage 2 rank</span>
+                        <span class="font-semibold">{{ item.stage2_rank }}</span>
+                      </div>
+
+                      <div class="text-xs text-slate-500">
+                        Phrase Wasserstein:
+                        {% if item.stage2_phrase_wasserstein_distance is not none %}
+                        {{ "%.6f"|format(item.stage2_phrase_wasserstein_distance) }}
+                        {% else %}
+                        N/A
+                        {% endif %}
+                      </div>
+                    </div>
+
+                    {% if item.seniority_score is defined %}
+                    <div class="pt-2 border-t border-slate-200">
+                      <div class="flex justify-between text-sm mb-1">
+                        <span class="text-slate-500">Seniority</span>
+                        <span class="font-semibold">
+                          {% if item.seniority_score is not none %}
+                          {{ "%.2f"|format(item.seniority_score) }}
+                          {% else %}
+                          N/A
+                          {% endif %}
+                        </span>
+                      </div>
+
+                      <div class="text-xs text-slate-500">
+                        Gap:
+                        {% if item.seniority_gap is not none %}
+                        {{ "%.2f"|format(item.seniority_gap) }}
+                        {% else %}
+                        N/A
+                        {% endif %}
+                      </div>
+
+                      {% if item.job_yoe_seniority_floor is not none %}
+                      <div class="text-xs text-slate-500">
+                        YOE floor:
+                        {{ item.job_yoe_seniority_floor_label or "N/A" }}
+                        {% if item.job_yoe_seniority_floor_applied %}
+                        applied
+                        {% endif %}
+                      </div>
+                      {% endif %}
+
+                      {% if item.job_title_seniority_floor is not none %}
+                      <div class="text-xs text-slate-500">
+                        Title floor:
+                        {{ item.job_title_seniority_floor_label or "N/A" }}
+                        {% if item.job_title_seniority_floor_applied %}
+                        applied
+                        {% endif %}
+                      </div>
+                      {% endif %}
+
+                      {% if item.job_title_seniority_ceiling is not none %}
+                      <div class="text-xs text-slate-500">
+                        Title ceiling:
+                        {{ item.job_title_seniority_ceiling_label or "N/A" }}
+                        {% if item.job_title_seniority_ceiling_applied %}
+                        applied
+                        {% endif %}
+                      </div>
+                      {% endif %}
+                    </div>
+                    {% endif %}
+
+                    {% if item.cross_encoder_score is defined %}
+                    <div class="pt-2 border-t border-slate-200">
+
+                      <div class="flex justify-between items-center">
+
+                        <span class="text-sm text-slate-500">
+                          Cross-encoder
+                        </span>
+
+                        <span class="font-mono text-lg font-bold text-indigo-700">
+                          {% if item.cross_encoder_score is not none %}
+                          {{ "%.6f"|format(item.cross_encoder_score) }}
+                          {% else %}
+                          N/A
+                          {% endif %}
+                        </span>
+
+                      </div>
+
+                    </div>
+                    {% endif %}
+
+                    <div class="pt-2 border-t border-slate-200">
+
+                      <div class="flex justify-between items-center">
+
+                        <span class="text-sm text-slate-500">
+                          Mahalanobis
+                        </span>
+
+                        <span class="font-mono text-lg font-bold text-indigo-700">
+                          {% if item.mahalanobis_distance is not none %}
+                          {{ "%.6f"|format(item.mahalanobis_distance) }}
+                          {% else %}
+                          N/A
+                          {% endif %}
+                        </span>
+
+                      </div>
+
+                    </div>
+
+                  </div>
+
+                </div>
+
+              </div>
+              {% endif %}
+
+            </div>
+
+            <!-- Bottom Section -->
+            <div class="mt-7">
+
+              <!-- Actions -->
+              <div class="flex flex-wrap items-center gap-4 mb-6">
+
+                {% if item.url %}
+                <a href="{{ item.url }}"
+                   target="_blank"
+                   rel="noopener noreferrer"
+                   class="brand-bg inline-flex items-center justify-center rounded-xl px-5 py-3 text-sm font-bold text-white shadow-sm transition">
+                  Open job posting
+                </a>
+                {% endif %}
+
+              </div>
+
+              <!-- Expandable sections -->
+              <div class="space-y-4">
+
+                <!-- Description -->
+                <details class="group/description rounded-2xl border border-slate-200 bg-slate-50 p-5">
+
+                  <summary class="cursor-pointer list-none flex items-center justify-between gap-4">
+                    <span class="font-semibold text-slate-800">
+                      Job description preview
+                    </span>
+
+                    <span class="text-slate-400 transition group-open/description:rotate-180">
+                      v
+                    </span>
+                  </summary>
+
+                  <div class="mt-5 whitespace-pre-wrap text-sm leading-relaxed text-slate-700">
+                    {{ item.job_description_preview }}
+                  </div>
+
+                </details>
+
+              </div>
+
+            </div>
+
+          </article>
+
+          {% endfor %}
+
+        </div>
+
+      </details>
+
+      {% endfor %}
+
+    </section>
+    {% endif %}
+    {% endfor %}
+    {% endif %}
+
+  </main>
+
+  {% include "partials/footer.html" %}
+</div>
+</body>
+</html>

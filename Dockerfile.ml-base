@@ -1,0 +1,24 @@
+FROM python:3.12-slim
+
+WORKDIR /app
+
+ENV PYTHONUNBUFFERED=1
+ENV MODEL_CACHE_DIR=/app/model_cache
+ENV HF_HOME=/app/model_cache
+ENV LOCAL_FILES_ONLY=true
+ENV MINILM_MODEL_NAME=sentence-transformers/all-MiniLM-L6-v2
+ENV MINILM_MODEL_REVISION=1110a243fdf4706b3f48f1d95db1a4f5529b4d41
+ENV CROSS_ENCODER_MODEL_NAME=cross-encoder/ms-marco-MiniLM-L6-v2
+ENV CROSS_ENCODER_MODEL_REVISION=4bebbd56fc380a66525f95b03d4ec1a4b41a4f1e
+
+COPY webapp/requirements_torch.txt /tmp/requirements_torch.txt
+RUN pip install --no-cache-dir -r /tmp/requirements_torch.txt
+
+COPY webapp/requirements.txt /tmp/requirements.txt
+RUN pip install --no-cache-dir -r /tmp/requirements.txt
+RUN python -c "import firebase_admin; from firebase_admin import auth"
+
+RUN python -c "from sentence_transformers import SentenceTransformer, CrossEncoder; import os; cache=os.environ['MODEL_CACHE_DIR']; minilm=os.environ['MINILM_MODEL_NAME']; minilm_revision=os.environ.get('MINILM_MODEL_REVISION') or None; cross=os.environ['CROSS_ENCODER_MODEL_NAME']; cross_revision=os.environ.get('CROSS_ENCODER_MODEL_REVISION') or None; SentenceTransformer(minilm, cache_folder=cache, revision=minilm_revision, local_files_only=False); CrossEncoder(cross, automodel_args={'cache_dir': cache}, tokenizer_args={'cache_dir': cache}, revision=cross_revision, local_files_only=False); SentenceTransformer(minilm, cache_folder=cache, revision=minilm_revision, local_files_only=True); CrossEncoder(cross, automodel_args={'cache_dir': cache}, tokenizer_args={'cache_dir': cache}, revision=cross_revision, local_files_only=True)"
+
+COPY webapp /tmp/webapp
+RUN PYTHONPATH=/tmp/webapp RESUME_DATASET_DIR=/tmp/webapp/webapp_data/resume_dataset python /tmp/webapp/scripts/build_resume_phrase_cache.py && rm -rf /tmp/webapp

@@ -1,0 +1,147 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Privacy Policy for Latmay</title>
+  <link rel="icon" type="image/png" href="{{ url_for('static', filename='assets/favicon-512.png') }}">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="{{ url_for('static', filename='app.css') }}">
+  <script defer src="https://cloud.umami.is/script.js" data-website-id="de4b94c2-a018-499f-abb8-bbc584a71691"></script>
+</head>
+
+<body><div class="site-shell">
+
+  {% include "partials/navbar.html" %}
+
+  <main class="site-main mx-auto w-full max-w-4xl px-5 py-10 sm:px-6 lg:py-16">
+
+    <a href="/" class="text-sm font-semibold text-indigo-600 hover:text-indigo-500">
+      &larr; Back to search
+    </a>
+
+    <section class="surface mt-7 rounded-3xl p-6 sm:p-10 lg:p-12">
+
+      <div class="eyebrow mb-4">
+        Privacy
+      </div>
+
+
+      <article class="legal-copy text-slate-700">
+        <h1>Latmay Privacy Policy</h1>
+
+        <p><strong>Last updated:</strong> July 14, 2026</p>
+
+        <h2>1. Overview</h2>
+
+        <p>Latmay is a free web-based job matching site operated by Alon Duvall at <a href="https://latmay.com">https://latmay.com</a>. This Privacy Policy explains what information Latmay may collect, how it is used, and what choices users have.</p>
+
+        <p>Latmay is designed to help users compare their background with job postings and receive job recommendations. Latmay can be used with or without an account.</p>
+
+        <h2>2. Accounts and Authentication</h2>
+
+        <p>Latmay offers optional user accounts. Creating an account is not required to use Latmay's core job matching features.</p>
+
+        <p>Account authentication is provided by Firebase Authentication, a service operated by Google. When you create or sign in to an account, Firebase Authentication processes information such as your email address, password or other login credentials, IP address, browser and device information, and related security information. You can learn more about how Google handles this information at <a href="https://firebase.google.com/support/privacy">https://firebase.google.com/support/privacy</a>.</p>
+
+        <p>Latmay does not receive or store your Firebase password. Authentication credentials are submitted directly to and processed by Firebase Authentication.</p>
+
+        <p>Latmay stores your Firebase user ID (a unique account identifier) in its own systems in order to link your account to any resume profile you choose to save.</p>
+
+        <h2>3. Information You Provide</h2>
+
+        <p>When using Latmay, you may upload or paste resume information and job preferences.</p>
+
+        <p>This information may include your name, phone number, email address, job titles, employment history, education history, skills, qualifications, and similar career-related information.</p>
+
+        <p>Latmay does not intentionally request sensitive personal information. However, resumes may contain sensitive information if users choose to include it. You should avoid submitting sensitive information unless you believe it is necessary.</p>
+
+        <h2>4. How Latmay Uses Information</h2>
+
+        <p>Latmay uses the information you provide to compare your background with job postings and return job recommendations.</p>
+
+        <p>The site may use automated ranking, embeddings, machine learning, text analysis, AI search, or similar tools to analyze resume and job text.</p>
+
+        <p>If you create an account and save a resume profile, Latmay uses the saved profile information described in Section 8 to provide job recommendations without requiring you to re-upload or reprocess your resume each time.</p>
+
+        <p>Latmay does not sell personal information. Latmay does not share resumes or saved profile information with employers, recruiters, or job boards. Latmay does not use resume information to train public AI models.</p>
+
+        <h2>5. Automated Recommendations</h2>
+
+        <p>Job recommendations are generated automatically and may not be complete, accurate, available, suitable, or up to date. Latmay does not guarantee that any recommendation will lead to an interview, job offer, or employment.</p>
+
+        <h2>6. Technical and Usage Information</h2>
+
+        <p>Latmay may collect basic server and usage logs, such as IP address, browser or device information, operating system, timestamps, pages visited, referring URLs, and similar technical information.</p>
+
+        <p>This information is used for security, debugging, operation, maintenance, and basic usage analysis.</p>
+
+        <h2>7. Service Providers and Analytics</h2>
+
+        <p>Latmay uses the following services to operate the site:</p>
+
+        <p>Firebase Authentication (Google), which provides account sign-up, sign-in, and related security functions as described in Section 2.</p>
+
+        <p>Google Cloud, which provides hosting, computing, storage, database, logging, and related infrastructure services.</p>
+
+        <p>Umami, a privacy-focused analytics tool used to understand site usage, such as page visits, referring websites, browser information, device information, and country-level location. Umami does not use cookies and does not track users across websites.</p>
+
+        <p>Personal information may be processed by these providers as part of operating, hosting, storing, securing, debugging, and maintaining the service. Because Latmay runs on cloud infrastructure, submitted information may pass through hosting, logging, storage, backup, or security systems operated by these providers, and some technical records, logs, backups, or provider-side copies may be retained according to those providers' systems and retention settings.</p>
+
+        <h2>8. Resume Information and Retention</h2>
+
+        <p><strong>Use without an account.</strong> If you use Latmay without an account or without saving a profile, submitted resume text is used only for the time needed to process your request and return job recommendations. Latmay does not intentionally store raw user-submitted resume text after processing is complete.</p>
+
+        <p><strong>Saved resume profiles.</strong> If you create an account and choose to save a resume profile, Latmay stores information derived from your resume, linked to your Firebase user ID. This may include numerical embeddings representing your resume, detected skills, technologies, and technical categories, related processing metadata, and creation and update timestamps. Latmay treats this derived information as personal information while it is linked to your account.</p>
+
+        <p>Even when you save a profile, Latmay does not intentionally retain the raw text of your resume after processing is complete.</p>
+
+        <p><strong>Retention.</strong> Saved profile information is retained until you delete the saved profile or delete your account. When account deletion completes successfully, Latmay deletes the saved resume profile from Latmay's database and requests deletion of your Firebase Authentication account from Google's systems.</p>
+
+        <p><strong>Residual copies.</strong> Immediate or complete removal of every technical copy may not always be possible. Residual information may persist temporarily in logs, backups, temporary files, debugging records, security records, or cloud-provider systems before being removed through normal system processes.</p>
+
+        <h2>9. Job Posting Sources and Published Datasets</h2>
+
+        <p>Job postings may come from third-party sources. Latmay does not send users' resumes or saved profile information to employers or job sources.</p>
+
+        <p>Latmay may publish datasets derived from publicly available job postings, for example as open data. Published datasets contain only job posting information and never include user resumes, saved profiles, account information, or other personal information submitted by users.</p>
+
+        <h2>10. Security</h2>
+
+        <p>Latmay takes reasonable steps to protect personal information. However, no internet or cloud-based service can guarantee perfect security or complete control over every technical copy created during processing.</p>
+
+        <h2>11. Age Limit</h2>
+
+        <p>Latmay is intended for users 18 and older.</p>
+
+        <h2>12. International Processing</h2>
+
+        <p>Information may be processed in the United States and through cloud service provider systems that may operate in other locations.</p>
+
+        <h2>13. Your Choices</h2>
+
+        <p>You have the following choices regarding your information:</p>
+
+        <p><strong>Delete a saved resume profile.</strong> You can delete a saved resume profile at any time from within the site. This removes the stored embeddings, detected skills and technologies, and related profile information from Latmay's systems. Deleting a saved profile does not delete your account.</p>
+
+        <p><strong>Delete your account.</strong> You can delete your Latmay account from within the site. When account deletion completes successfully, your saved resume profile is deleted from Latmay's database and Latmay requests deletion of your Firebase Authentication account from Google's systems.</p>
+
+        <p><strong>Use Latmay without an account.</strong> You can use Latmay's core job matching without creating an account or saving a profile.</p>
+
+        <p><strong>Contact Latmay.</strong> You may contact Latmay to ask privacy questions or request access, correction, or deletion of personal information, where applicable and reasonably possible.</p>
+
+        <p>Contact: <a href="mailto:contact@latmay.com">contact@latmay.com</a></p>
+
+        <h2>14. Changes to This Policy</h2>
+
+        <p>Latmay may update this Privacy Policy as the site changes. The updated version will be posted on this page.</p>
+      </article>
+
+    </section>
+
+  </main>
+
+  {% include "partials/footer.html" %}
+</div>
+</body>
+</html>

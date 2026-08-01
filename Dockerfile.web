@@ -1,0 +1,12 @@
+ARG ML_BASE_IMAGE=latmay-ml-base:latest
+FROM ${ML_BASE_IMAGE}
+
+WORKDIR /app
+
+ENV PYTHONPATH=/app
+ENV LOCAL_FILES_ONLY=true
+ENV MODEL_CACHE_DIR=/app/model_cache
+
+COPY webapp /app
+
+CMD ["sh", "-c", "gunicorn --timeout ${GUNICORN_TIMEOUT:-300} --bind 0.0.0.0:${PORT:-8080} main:app"]

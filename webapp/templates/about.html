@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>About Latmay</title>
+  <link rel="icon" type="image/png" href="{{ url_for('static', filename='assets/favicon-512.png') }}">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="{{ url_for('static', filename='app.css') }}">
+  <script defer src="https://cloud.umami.is/script.js" data-website-id="de4b94c2-a018-499f-abb8-bbc584a71691"></script>
+</head>
+<body>
+<div class="site-shell">
+  {% include "partials/navbar.html" %}
+
+  <main class="site-main mx-auto w-full max-w-5xl px-5 py-10 sm:px-6 lg:py-16">
+    <a href="/" class="inline-flex items-center gap-2 text-sm font-bold text-emerald-700 hover:text-emerald-900">&larr; Back to search</a>
+
+    <section class="surface mt-7 rounded-3xl p-7 sm:p-10 lg:p-14">
+      <div class="eyebrow mb-4">Our approach</div>
+      <h1 class="max-w-3xl text-4xl font-extrabold tracking-tight text-emerald-950 sm:text-5xl">A more thoughtful way to find relevant work</h1>
+      <p class="mt-6 max-w-3xl text-lg leading-8 text-slate-600">
+        Latmay is designed to help people find jobs that closely match their background, skills, and experience without manually searching through large numbers of postings. The goal is for a user to provide their resume and receive a ranked list of jobs that are strong overall matches for their qualifications and unique skill set. Rather than relying only on simple keyword matching, Latmay attempts to identify jobs whose responsibilities, requirements, and technical content align well with the user's experience.
+      </p>
+
+      <div class="mt-10 grid gap-5 md:grid-cols-2">
+        <section class="soft-surface rounded-2xl p-6 sm:p-7">
+          <div class="mb-5 grid h-11 w-11 place-items-center rounded-xl bg-emerald-100 text-emerald-700"><svg class="h-5 w-5" viewBox="0 0 24 24" fill="none"><path d="M4 19V5a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v14M8 7h8M8 11h5M3 19h18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></div>
+          <h2 class="mb-3 text-xl font-bold text-emerald-950">What this site does</h2>
+          <p class="leading-7 text-slate-600">The user pastes their resume as plain text, and the system compares it against a continuously updated collection of job postings. The platform analyzes words, phrases, and larger pieces of text to estimate how well each job matches the resume. The final output is a ranked list of jobs that the system predicts are the closest overall fits.</p>
+        </section>
+
+        <section class="soft-surface rounded-2xl p-6 sm:p-7">
+          <div class="mb-5 grid h-11 w-11 place-items-center rounded-xl bg-emerald-100 text-emerald-700"><svg class="h-5 w-5" viewBox="0 0 24 24" fill="none"><path d="M4 16l5-5 4 4 7-8M17 7h3v3" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+          <h2 class="mb-3 text-xl font-bold text-emerald-950">Current status</h2>
+          <p class="leading-7 text-slate-600">Latmay is still an active and evolving project. The ranking methods, filtering systems, data collection pipeline, and user interface are all continuing to be refined and expanded over time.</p>
+          <p class="mt-4 leading-7 text-slate-600">Current work includes improving ranking quality, adding better filtering and analytics tools, expanding job coverage, and making the overall search experience faster and more informative.</p>
+        </section>
+      </div>
+
+      <section class="soft-surface mt-5 rounded-2xl p-6 sm:p-7">
+        <div class="mb-5 grid h-11 w-11 place-items-center rounded-xl bg-emerald-100 text-emerald-700"><svg class="h-5 w-5" viewBox="0 0 24 24" fill="none"><path d="m9 8-4 4 4 4M15 8l4 4-4 4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+        <h2 class="mb-3 text-xl font-bold text-emerald-950">Open by design</h2>
+        <p class="leading-7 text-slate-600">Latmay is meant to be a free, open tool for job seekers, not a walled garden. Both the application code and the list of company career pages used to find jobs are published publicly, so anyone can see exactly how matching works, run their own copy, or contribute improvements.</p>
+        <div class="mt-5 flex flex-wrap gap-4 text-sm font-semibold">
+          <a href="https://github.com/latmay/latmay_app" target="_blank" rel="noopener noreferrer" class="inline-flex items-center gap-2 text-emerald-700 hover:text-emerald-900">
+            <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none"><path d="M7 17 17 7M9 7h8v8" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            View the source code on GitHub
+          </a>
+          <a href="https://huggingface.co/datasets/latmay/ats-career-page-urls" target="_blank" rel="noopener noreferrer" class="inline-flex items-center gap-2 text-emerald-700 hover:text-emerald-900">
+            <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none"><path d="M7 17 17 7M9 7h8v8" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            View the job source dataset on Hugging Face
+          </a>
+        </div>
+      </section>
+    </section>
+  </main>
+
+  {% include "partials/footer.html" %}
+</div>
+</body>
+</html>

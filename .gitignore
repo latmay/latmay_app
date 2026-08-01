@@ -1,0 +1,80 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Virtual environments
+.venv/
+venv/
+env/
+
+# Environment variables / secrets
+.env
+*.env
+cloudrun.env.yaml
+credentials.json
+*.pem
+*.key
+
+# Internal infra / local-path references
+docs/cloud_run_jobs.md
+
+# Agent/dev instructions (not needed by external contributors)
+AGENTS.md
+
+# Old README content kept for local reference only
+README_ARCHIVE.md
+
+# Debug/diagnostic artifacts
+diagnostics/
+discovery_diagnostics.json
+
+# Local sample/demo data - not used by the actual ingestion/enrichment/export
+# pipeline (which reads/writes Postgres + GCS). Only used by manual test
+# harnesses and smoke tests. See README for what to supply here.
+data/
+
+# Real scraped job postings / resumes used only by the manual all-pairs
+# ranking harness (webapp/scripts/run_test_ranking_harness.py), not by the
+# automated test suite. See README for the expected format.
+webapp/webapp_data/test_data/jobs/
+webapp/webapp_data/test_data/resumes/
+
+# Sample resumes used for statistical comparison tests (see README.md in that
+# folder). Kept on disk locally / baked into the deployed image, not tracked.
+webapp/webapp_data/resume_dataset/*.md
+!webapp/webapp_data/resume_dataset/README.md
+
+# Model caches
+model_cache/
+.cache/
+huggingface/
+
+# Data files
+*.sqlite
+*.db
+
+# Large generated datasets
+*.npz
+*.npy
+*.jsonl
+combined_jobs*.csv
+# Generated embeddings / artifacts
+*.npz
+webapp/webapp_data/test_data/generated/
+webapp/webapp_data/test_data/results/*
+!webapp/webapp_data/test_data/results/.gitkeep
+
+
+# Jupyter
+.ipynb_checkpoints/
+
+# OS / editor files
+.DS_Store
+.vscode/
+.idea/
+.claude/settings.local.json
+
+# Logs
+*.log

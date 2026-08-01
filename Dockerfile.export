@@ -1,0 +1,13 @@
+FROM python:3.12-slim
+
+WORKDIR /app
+
+ENV PYTHONUNBUFFERED=1
+ENV PYTHONPATH=/app
+
+COPY data_pipeline/requirements.export.txt /tmp/requirements.export.txt
+RUN pip install --no-cache-dir -r /tmp/requirements.export.txt
+
+COPY data_pipeline /app/data_pipeline
+
+CMD ["python", "-m", "data_pipeline.export.main_export"]
