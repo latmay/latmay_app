@@ -166,6 +166,7 @@ def upsert_jobs(conn: psycopg.Connection, records: Iterable[dict[str, Any]]) -> 
         "OR jobs.content_text IS DISTINCT FROM EXCLUDED.content_text"
     )
     content_changed = "jobs.content_text IS DISTINCT FROM EXCLUDED.content_text"
+    posted_at_changed = "jobs.posted_at IS DISTINCT FROM EXCLUDED.posted_at"
     update_assignments.extend(
         [
             (
@@ -192,6 +193,26 @@ def upsert_jobs(conn: psycopg.Connection, records: Iterable[dict[str, Any]]) -> 
                 "clearance_extraction_version = CASE "
                 f"WHEN {content_changed} THEN NULL "
                 "ELSE jobs.clearance_extraction_version END"
+            ),
+            (
+                "posted_at_utc = CASE "
+                f"WHEN {posted_at_changed} THEN NULL "
+                "ELSE jobs.posted_at_utc END"
+            ),
+            (
+                "posted_at_normalization_status = CASE "
+                f"WHEN {posted_at_changed} THEN NULL "
+                "ELSE jobs.posted_at_normalization_status END"
+            ),
+            (
+                "posted_at_normalization_failure_reason = CASE "
+                f"WHEN {posted_at_changed} THEN NULL "
+                "ELSE jobs.posted_at_normalization_failure_reason END"
+            ),
+            (
+                "posted_at_normalized_at_utc = CASE "
+                f"WHEN {posted_at_changed} THEN NULL "
+                "ELSE jobs.posted_at_normalized_at_utc END"
             ),
         ]
     )

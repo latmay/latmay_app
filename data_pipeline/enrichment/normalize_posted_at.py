@@ -9,6 +9,7 @@ adds a canonical timestamp that export and ranking can use for recency ordering.
 
 import os
 import re
+import time as monotonic_time
 from datetime import date, datetime, time, timedelta, timezone
 from typing import Any
 
@@ -24,7 +25,7 @@ def env_positive_int(name: str, default: int) -> int:
     return value if value > 0 else default
 
 
-POSTED_AT_NORMALIZATION_LIMIT = env_positive_int("POSTED_AT_NORMALIZATION_LIMIT", 5000)
+POSTED_AT_NORMALIZATION_BATCH_SIZE = env_positive_int("POSTED_AT_NORMALIZATION_BATCH_SIZE", 500)
 
 RELATIVE_POSTED_RE = re.compile(
     r"^\s*(?:posted\s+)?(?:(today|yesterday)|(\d+)\+?\s+(minute|hour|day|week|month|year)s?\s+ago)\s*$",
@@ -126,7 +127,7 @@ def normalize_posted_at_value(value: Any, *, reference_time: datetime | None = N
     return parse_relative_posted_at(value, reference_time)
 
 
-def fetch_rows_to_normalize(conn, *, limit: int = 5000) -> list[dict[str, Any]]:
+def fetch_rows_to_normalize(conn, *, limit: int = 500, after_id: int = 0) -> list[dict[str, Any]]:
     with conn.cursor() as cur:
         cur.execute(
             """
@@ -141,24 +142,27 @@ def fetch_rows_to_normalize(conn, *, limit: int = 5000) -> list[dict[str, Any]]:
             WHERE posted_at IS NOT NULL
               AND NULLIF(btrim(posted_at), '') IS NOT NULL
               AND posted_at_utc IS NULL
+              AND posted_at_normalization_failure_reason IS NULL
+              AND id > %s
             ORDER BY id
             LIMIT %s
             """,
-            (limit,),
+            (after_id, limit),
         )
         return cur.fetchall()
 
 
 def update_posted_at_utc(conn, rows: list[dict[str, Any]]) -> tuple[int, int]:
     updates: list[tuple[datetime, int]] = []
-    unparseable = 0
+    failures: list[tuple[str, int]] = []
     for row in rows:
         normalized = normalize_posted_at_value(
             row.get("posted_at"),
             reference_time=reference_time_for_row(row),
         )
         if normalized is None:
-            unparseable += 1
+            reason = "unsupported_format_or_missing_relative_reference"
+            failures.append((reason, int(row["id"])))
             continue
         updates.append((normalized, int(row["id"])))
 
@@ -167,24 +171,83 @@ def update_posted_at_utc(conn, rows: list[dict[str, Any]]) -> tuple[int, int]:
             cur.executemany(
                 """
                 UPDATE jobs
-                SET posted_at_utc = %s
+                SET
+                    posted_at_utc = %s,
+                    posted_at_normalization_status = 'normalized',
+                    posted_at_normalization_failure_reason = NULL,
+                    posted_at_normalized_at_utc = now()
                 WHERE id = %s
                 """,
                 updates,
             )
+    if failures:
+        with conn.cursor() as cur:
+            cur.executemany(
+                """
+                UPDATE jobs
+                SET
+                    posted_at_normalization_status = 'unparseable',
+                    posted_at_normalization_failure_reason = %s,
+                    posted_at_normalized_at_utc = now()
+                WHERE id = %s
+                """,
+                failures,
+            )
 
     conn.commit()
 
-    return len(updates), unparseable
+    return len(updates), len(failures)
 
 
 def run(conn) -> int:
-    rows = fetch_rows_to_normalize(conn, limit=POSTED_AT_NORMALIZATION_LIMIT)
-    updated, unparseable = update_posted_at_utc(conn, rows)
+    total_checked = 0
+    total_updated = 0
+    total_unparseable = 0
+    batch_number = 0
+    after_id = 0
+
     print(
-        "normalize_posted_at: "
-        f"limit={POSTED_AT_NORMALIZATION_LIMIT}, "
-        f"checked={len(rows)}, updated={updated}, unparseable={unparseable}",
+        f"normalize_posted_at: starting batch_size={POSTED_AT_NORMALIZATION_BATCH_SIZE}",
         flush=True,
     )
-    return updated
+    while True:
+        select_started = monotonic_time.monotonic()
+        rows = fetch_rows_to_normalize(
+            conn,
+            limit=POSTED_AT_NORMALIZATION_BATCH_SIZE,
+            after_id=after_id,
+        )
+        select_seconds = monotonic_time.monotonic() - select_started
+        if not rows:
+            break
+
+        batch_number += 1
+        after_id = int(rows[-1]["id"])
+        print(
+            "normalize_posted_at: selected "
+            f"batch={batch_number}, rows={len(rows)}, through_id={after_id}, "
+            f"duration_seconds={select_seconds:.3f}",
+            flush=True,
+        )
+
+        update_started = monotonic_time.monotonic()
+        updated, unparseable = update_posted_at_utc(conn, rows)
+        update_seconds = monotonic_time.monotonic() - update_started
+        total_checked += len(rows)
+        total_updated += updated
+        total_unparseable += unparseable
+        print(
+            "normalize_posted_at: committed "
+            f"batch={batch_number}, checked={len(rows)}, updated={updated}, "
+            f"unparseable={unparseable}, duration_seconds={update_seconds:.3f}, "
+            f"total_checked={total_checked}",
+            flush=True,
+        )
+
+    print(
+        "normalize_posted_at: finished "
+        f"batches={batch_number}, checked={total_checked}, updated={total_updated}, "
+        f"unparseable={total_unparseable}",
+        flush=True,
+    )
+    return total_updated
