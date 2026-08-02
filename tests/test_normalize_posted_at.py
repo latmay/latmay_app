@@ -56,8 +56,10 @@ class NormalizePostedAtTests(unittest.TestCase):
 
         query = " ".join(conn.recording_cursor.query.split())
         self.assertIn("AND posted_at_utc IS NULL", query)
+        self.assertIn("AND posted_at_normalization_failure_reason IS NULL", query)
+        self.assertIn("AND id > %s", query)
         self.assertNotIn("posted_at !~", query)
-        self.assertEqual(conn.recording_cursor.params, (123,))
+        self.assertEqual(conn.recording_cursor.params, (0, 123))
 
     def test_no_updates_still_commit_read_transaction(self) -> None:
         conn = RecordingConnection()
