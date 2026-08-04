@@ -649,13 +649,20 @@
       const loadMoreButton = document.getElementById("recent_jobs_load_more");
       if (!listEl || !statusEl || !loadMoreButton) return;
 
-      const BATCH_SIZE = 12;
+      // Jobs are grouped by company so one high-volume poster can't dominate the
+      // feed. Shards are exported newest-first (see recent_jobs_service.py), so a
+      // company's rank is simply the order its first (i.e. most recent) job is
+      // encountered while draining shards -- no separate timestamp comparison needed.
+      const GROUPS_PER_PAGE = 10;
 
       let nextShardIndex = 0;
       let hasMoreShards = true;
-      let queue = [];
       let loading = false;
       let exhausted = false;
+      let shownCount = 0;
+
+      const companies = new Map(); // company name -> { name, jobs, currentIndex, articleEl }
+      const companyOrder = [];
 
       function escapeHtml(value) {
         const div = document.createElement("div");
@@ -663,21 +670,72 @@
         return div.innerHTML;
       }
 
-      function renderJob(job) {
-        const article = document.createElement("article");
-        article.className = "job-card rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6";
-        const meta = [job.company, job.location].filter(Boolean).map(escapeHtml).join(" &middot; ");
+      function renderCompanyCardContent(article, group) {
+        const total = group.jobs.length;
+        const index = Math.min(group.currentIndex, total - 1);
+        group.currentIndex = index;
+        const job = group.jobs[index];
+        const meta = [job.location, job.work_arrangement].filter(Boolean).map(escapeHtml).join(" &middot; ");
         article.innerHTML = `
           <div class="flex flex-wrap items-start justify-between gap-3">
             <div>
-              <h3 class="text-lg font-bold text-emerald-950">${escapeHtml(job.title || "Untitled role")}</h3>
+              <p class="text-xs font-semibold uppercase tracking-wide text-emerald-700">${escapeHtml(group.name)}</p>
+              <h3 class="mt-1 text-lg font-bold text-emerald-950">${escapeHtml(job.title || "Untitled role")}</h3>
               ${meta ? `<p class="mt-1 text-sm text-slate-600">${meta}</p>` : ""}
             </div>
             ${job.posted_display ? `<span class="shrink-0 rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-600">${escapeHtml(job.posted_display)}</span>` : ""}
           </div>
-          ${job.url ? `<a href="${escapeHtml(job.url)}" target="_blank" rel="noopener noreferrer" class="brand-bg mt-4 inline-flex items-center justify-center rounded-lg px-4 py-2 text-sm font-semibold text-white">View job</a>` : ""}
+          <div class="mt-4 flex flex-wrap items-center justify-between gap-3">
+            ${job.url ? `<a href="${escapeHtml(job.url)}" target="_blank" rel="noopener noreferrer" class="brand-bg inline-flex items-center justify-center rounded-lg px-4 py-2 text-sm font-semibold text-white">View job</a>` : "<span></span>"}
+            <div class="flex items-center gap-2 text-sm font-semibold text-slate-600">
+              <button type="button" class="company_prev_button rounded-lg border border-slate-300 bg-white px-2.5 py-1.5 shadow-sm transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40" ${index === 0 ? "disabled" : ""} aria-label="Previous role at ${escapeHtml(group.name)}">&#8249;</button>
+              <span>${index + 1} / ${total}</span>
+              <button type="button" class="company_next_button rounded-lg border border-slate-300 bg-white px-2.5 py-1.5 shadow-sm transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40" ${index === total - 1 ? "disabled" : ""} aria-label="Next role at ${escapeHtml(group.name)}">&#8250;</button>
+            </div>
+          </div>
         `;
+      }
+
+      function renderCompanyCard(group) {
+        const article = document.createElement("article");
+        article.className = "job-card rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6";
+        article.dataset.company = group.name;
+        group.articleEl = article;
         listEl.appendChild(article);
+        renderCompanyCardContent(article, group);
+      }
+
+      function distributeJobs(jobs) {
+        for (const job of jobs) {
+          const key = (job.company || "").trim() || "Unknown company";
+          let group = companies.get(key);
+          if (!group) {
+            group = { name: key, jobs: [], currentIndex: 0, articleEl: null };
+            companies.set(key, group);
+            companyOrder.push(key);
+          }
+          group.jobs.push(job);
+          // Keep an already-rendered card's counter/arrows in sync if a later
+          // shard adds another job for the same company.
+          if (group.articleEl) {
+            renderCompanyCardContent(group.articleEl, group);
+          }
+        }
+      }
+
+      async function fetchNextShard() {
+        const response = await fetch(`/api/recent-jobs?shard=${nextShardIndex}`);
+        if (!response.ok) throw new Error("request failed");
+        const page = await response.json();
+        hasMoreShards = Boolean(page.has_more);
+        nextShardIndex += 1;
+        distributeJobs(page.jobs || []);
+      }
+
+      async function ensureGroups(targetCount) {
+        while (companyOrder.length < targetCount && hasMoreShards) {
+          await fetchNextShard();
+        }
       }
 
       function finish(message) {
@@ -692,27 +750,18 @@
         loadMoreButton.disabled = true;
         loadMoreButton.textContent = "Loading...";
         try {
-          if (queue.length === 0) {
-            if (!hasMoreShards) {
-              finish(listEl.children.length ? "You've reached the end of recent listings." : "No recent jobs available right now.");
-              return;
-            }
-            const response = await fetch(`/api/recent-jobs?shard=${nextShardIndex}`);
-            if (!response.ok) throw new Error("request failed");
-            const page = await response.json();
-            queue = page.jobs || [];
-            hasMoreShards = Boolean(page.has_more);
-            nextShardIndex += 1;
-            if (queue.length === 0 && !hasMoreShards) {
-              finish(listEl.children.length ? "You've reached the end of recent listings." : "No recent jobs available right now.");
-              return;
-            }
-          }
+          const target = shownCount + GROUPS_PER_PAGE;
+          await ensureGroups(target);
 
-          queue.splice(0, BATCH_SIZE).forEach(renderJob);
+          const newCount = Math.min(target, companyOrder.length);
+          for (let i = shownCount; i < newCount; i += 1) {
+            renderCompanyCard(companies.get(companyOrder[i]));
+          }
+          shownCount = newCount;
           statusEl.textContent = "";
-          if (queue.length === 0 && !hasMoreShards) {
-            finish("You've reached the end of recent listings.");
+
+          if (shownCount >= companyOrder.length && !hasMoreShards) {
+            finish(shownCount ? "You've reached the end of recent listings." : "No recent jobs available right now.");
           }
         } catch (error) {
           statusEl.textContent = "Could not load more jobs right now.";
@@ -725,9 +774,22 @@
         }
       }
 
+      listEl.addEventListener("click", (event) => {
+        const prevBtn = event.target.closest(".company_prev_button");
+        const nextBtn = event.target.closest(".company_next_button");
+        if (!prevBtn && !nextBtn) return;
+        const article = (prevBtn || nextBtn).closest("article[data-company]");
+        if (!article) return;
+        const group = companies.get(article.dataset.company);
+        if (!group) return;
+        if (prevBtn && group.currentIndex > 0) group.currentIndex -= 1;
+        if (nextBtn && group.currentIndex < group.jobs.length - 1) group.currentIndex += 1;
+        renderCompanyCardContent(article, group);
+      });
+
       loadMoreButton.addEventListener("click", loadMore);
-      // Populate the first batch automatically so the section isn't empty on load;
-      // every batch after that requires an explicit click.
+      // Populate the first page of company groups automatically so the section
+      // isn't empty on load; every page after that requires an explicit click.
       loadMore();
     })();
   </script>
