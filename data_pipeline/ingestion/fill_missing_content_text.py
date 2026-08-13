@@ -19,6 +19,13 @@ from bs4 import BeautifulSoup
 
 from data_pipeline.common.data_quality import length_distribution, log_data_quality
 from data_pipeline.common.db import strip_nul_bytes
+from data_pipeline.ingestion.size_limits import (
+    MAX_CONTENT_HTML_BYTES,
+    MAX_CONTENT_TEXT_BYTES,
+    MAX_DETAIL_RESPONSE_BYTES,
+    read_response_with_limit,
+    truncate_utf8,
+)
 
 
 MIN_SECONDS_BETWEEN_REQUESTS = float(os.environ.get("CONTENT_FETCH_GAP_SECONDS", "2"))
@@ -60,8 +67,10 @@ def fetch_html(url: str) -> str:
             "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
         },
         timeout=REQUEST_TIMEOUT_SECONDS,
+        stream=True,
     )
     response.raise_for_status()
+    read_response_with_limit(response, MAX_DETAIL_RESPONSE_BYTES)
     return response.text
 
 
@@ -166,6 +175,8 @@ def utc_now() -> datetime:
 
 
 def record_content_fetch_success(conn, job_id: int, html: str, text: str) -> None:
+    html, html_truncated = truncate_utf8(html, MAX_CONTENT_HTML_BYTES)
+    text, text_truncated = truncate_utf8(text, MAX_CONTENT_TEXT_BYTES)
     html = strip_nul_bytes(html)
     text = strip_nul_bytes(text)
     with conn.cursor() as cur:
@@ -181,10 +192,18 @@ def record_content_fetch_success(conn, job_id: int, html: str, text: str) -> Non
                 enrichment_ml_version = NULL,
                 content_fetch_failed_count = 0,
                 content_fetch_last_failed_at_utc = NULL,
-                content_fetch_last_error_type = NULL
+                content_fetch_last_error_type = NULL,
+                raw_json = COALESCE(raw_json, '{}'::jsonb) || jsonb_build_object(
+                    'ingestion_size_limits',
+                    jsonb_build_object(
+                        'content_html_truncated', %s::boolean,
+                        'content_text_truncated', %s::boolean,
+                        'raw_json_omitted', false
+                    )
+                )
             WHERE id = %s
             """,
-            (html, text, job_id),
+            (html, text, html_truncated, text_truncated, job_id),
         )
 
 

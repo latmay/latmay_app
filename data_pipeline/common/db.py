@@ -117,6 +117,9 @@ def strip_nul_bytes(value: Any) -> Any:
 
 
 def normalize_job_record(record: dict[str, Any]) -> dict[str, Any]:
+    from data_pipeline.ingestion.size_limits import limit_job_record_storage
+
+    record = limit_job_record_storage(record)
     sanitized_record = strip_nul_bytes(record)
     normalized = {column: sanitized_record.get(column) for column in JOB_COLUMNS}
     now_utc = datetime.now(timezone.utc).replace(microsecond=0)

@@ -29,6 +29,7 @@ from data_pipeline.ingestion.source_loader import (
     rollback_failed_source_attempt,
     update_source_last_get_at,
 )
+from data_pipeline.ingestion.size_limits import MAX_LISTING_RESPONSE_BYTES, read_response_with_limit
 
 REQUEST_TIMEOUT_SECONDS = 30
 USER_AGENT = "Mozilla/5.0 (compatible; latmay-lever/1.0)"
@@ -155,9 +156,11 @@ def fetch_lever_json(url: str) -> list[dict[str, Any]]:
         url,
         headers={"User-Agent": USER_AGENT, "Accept": "application/json"},
         timeout=REQUEST_TIMEOUT_SECONDS,
+        stream=True,
     )
     log_timing("lever", lever_company_slug_from_url(url).rstrip("-"), "http_get", time.monotonic() - _t)
     response.raise_for_status()
+    read_response_with_limit(response, MAX_LISTING_RESPONSE_BYTES)
     payload = response.json()
     if not isinstance(payload, list):
         raise ValueError("Expected Lever response to be a JSON list.")

@@ -40,6 +40,11 @@ from data_pipeline.ingestion.source_loader import (
     rollback_failed_source_attempt,
     update_source_last_get_at,
 )
+from data_pipeline.ingestion.size_limits import (
+    MAX_LISTING_RESPONSE_BYTES,
+    ResponseTooLarge,
+    read_response_with_limit,
+)
 
 REQUEST_TIMEOUT_SECONDS = int(os.environ.get("ICIMS_REQUEST_TIMEOUT_SECONDS", "30"))
 USER_AGENT = os.environ.get("ICIMS_USER_AGENT", "latmay-icims/1.0 (+https://latmay.com)")
@@ -381,10 +386,12 @@ def robots_parser_for(url: str, session: requests.Session) -> RobotFileParser | 
             f"{root}/robots.txt",
             headers={"User-Agent": USER_AGENT, "Accept": "text/plain,*/*;q=0.8"},
             timeout=REQUEST_TIMEOUT_SECONDS,
+            stream=True,
         )
         if response.status_code >= 400:
             _robots_cache[root] = None
             return None
+        read_response_with_limit(response, MAX_LISTING_RESPONSE_BYTES)
         parser.parse(response.text.splitlines())
         _robots_cache[root] = parser
         return parser
@@ -413,16 +420,27 @@ def polite_request(session: requests.Session, method: str, url: str, **kwargs: A
     for attempt in range(MAX_RETRIES + 1):
         try:
             _t = time.monotonic()
-            response = session.request(method, url, headers=headers, timeout=REQUEST_TIMEOUT_SECONDS, **kwargs)
+            response = session.request(
+                method,
+                url,
+                headers=headers,
+                timeout=REQUEST_TIMEOUT_SECONDS,
+                stream=True,
+                **kwargs,
+            )
             log_timing("icims", source_company_from_url(url), "http_get", time.monotonic() - _t)
             if response.status_code == 429 or 500 <= response.status_code < 600:
                 retry_after = response.headers.get("Retry-After")
                 if attempt < MAX_RETRIES:
+                    response.close()
                     delay = float(retry_after) if retry_after and retry_after.isdigit() else min(2 ** attempt, 8)
                     time.sleep(delay)
                     continue
             response.raise_for_status()
+            read_response_with_limit(response, MAX_LISTING_RESPONSE_BYTES)
             return response
+        except ResponseTooLarge:
+            raise
         except requests.RequestException as exc:
             last_exc = exc
             if attempt >= MAX_RETRIES:

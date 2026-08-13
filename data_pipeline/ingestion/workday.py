@@ -29,6 +29,11 @@ from data_pipeline.ingestion.source_loader import (
     rollback_failed_source_attempt,
     update_source_last_get_at,
 )
+from data_pipeline.ingestion.size_limits import (
+    MAX_DETAIL_RESPONSE_BYTES,
+    MAX_LISTING_RESPONSE_BYTES,
+    read_response_with_limit,
+)
 
 REQUEST_TIMEOUT_SECONDS = 30
 USER_AGENT = "Mozilla/5.0 (compatible; latmay-workday/1.0)"
@@ -131,13 +136,17 @@ def workday_request(method: str, url: str, **kwargs: Any) -> requests.Response:
             url,
             headers=headers,
             timeout=REQUEST_TIMEOUT_SECONDS,
+            stream=True,
             **kwargs,
         )
         log_timing("workday", urlparse(url).netloc, "http_get", time.monotonic() - _t)
         if response.status_code != 503 or attempt >= MAX_503_RETRIES:
             response.raise_for_status()
+            limit = MAX_DETAIL_RESPONSE_BYTES if method.upper() == "GET" else MAX_LISTING_RESPONSE_BYTES
+            read_response_with_limit(response, limit)
             return response
 
+        response.close()
         backoff = (2**attempt) * MIN_REQUEST_GAP_SECONDS + random.uniform(0, RANDOM_JITTER_MAX_SECONDS)
         time.sleep(backoff)
 

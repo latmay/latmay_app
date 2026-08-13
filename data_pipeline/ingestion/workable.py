@@ -39,6 +39,12 @@ from data_pipeline.ingestion.source_loader import (
     rollback_failed_source_attempt,
     update_source_last_get_at,
 )
+from data_pipeline.ingestion.size_limits import (
+    MAX_DETAIL_RESPONSE_BYTES,
+    MAX_LISTING_RESPONSE_BYTES,
+    ResponseTooLarge,
+    read_response_with_limit,
+)
 
 REQUEST_TIMEOUT_SECONDS = int(os.environ.get("WORKABLE_REQUEST_TIMEOUT_SECONDS", "30"))
 USER_AGENT = os.environ.get(
@@ -165,7 +171,14 @@ def raise_retry_after_source_failure(
     raise exc
 
 
-def polite_get(session: requests.Session, url: str, *, timing_company: str | None = None, **kwargs: Any) -> requests.Response:
+def polite_get(
+    session: requests.Session,
+    url: str,
+    *,
+    timing_company: str | None = None,
+    max_response_bytes: int = MAX_LISTING_RESPONSE_BYTES,
+    **kwargs: Any,
+) -> requests.Response:
     sleep_before_host_request(urlparse(url).netloc.lower())
     headers = {
         "User-Agent": USER_AGENT,
@@ -178,11 +191,12 @@ def polite_get(session: requests.Session, url: str, *, timing_company: str | Non
     for attempt in range(MAX_RETRIES + 1):
         try:
             _t = time.monotonic()
-            response = session.get(url, headers=headers, timeout=REQUEST_TIMEOUT_SECONDS, **kwargs)
+            response = session.get(url, headers=headers, timeout=REQUEST_TIMEOUT_SECONDS, stream=True, **kwargs)
             log_timing("workable", company, "http_get", time.monotonic() - _t)
             if response.status_code == 429 or 500 <= response.status_code < 600:
                 raise_retry_after_source_failure(response=response, method="GET", company=company, url=url)
                 if attempt < MAX_RETRIES:
+                    response.close()
                     delay = min(2 ** attempt, 8)
                     print_retry_sleep(
                         method="GET",
@@ -195,8 +209,11 @@ def polite_get(session: requests.Session, url: str, *, timing_company: str | Non
                     time.sleep(delay)
                     continue
             response.raise_for_status()
+            read_response_with_limit(response, max_response_bytes)
             return response
         except RetryAfterSourceFailure:
+            raise
+        except ResponseTooLarge:
             raise
         except requests.RequestException as exc:
             last_exc = exc
@@ -232,11 +249,18 @@ def polite_post_json(session: requests.Session, url: str, *, json_body: dict[str
     for attempt in range(MAX_RETRIES + 1):
         try:
             _t = time.monotonic()
-            response = session.post(url, headers=headers, json=json_body, timeout=REQUEST_TIMEOUT_SECONDS)
+            response = session.post(
+                url,
+                headers=headers,
+                json=json_body,
+                timeout=REQUEST_TIMEOUT_SECONDS,
+                stream=True,
+            )
             log_timing("workable", company, "http_post", time.monotonic() - _t)
             if response.status_code == 429 or 500 <= response.status_code < 600:
                 raise_retry_after_source_failure(response=response, method="POST", company=company, url=url)
                 if attempt < MAX_RETRIES:
+                    response.close()
                     delay = min(2 ** attempt, 8)
                     print_retry_sleep(
                         method="POST",
@@ -249,8 +273,11 @@ def polite_post_json(session: requests.Session, url: str, *, json_body: dict[str
                     time.sleep(delay)
                     continue
             response.raise_for_status()
+            read_response_with_limit(response, MAX_LISTING_RESPONSE_BYTES)
             return response
         except RetryAfterSourceFailure:
+            raise
+        except ResponseTooLarge:
             raise
         except requests.RequestException as exc:
             last_exc = exc
@@ -343,6 +370,7 @@ def fetch_workable_api_jobs(
                     session,
                     detail_url,
                     timing_company=account_slug,
+                    max_response_bytes=MAX_DETAIL_RESPONSE_BYTES,
                     headers={"Accept": "application/json, text/plain, */*", "Referer": referer},
                 )
                 detail_payload = detail_response.json()

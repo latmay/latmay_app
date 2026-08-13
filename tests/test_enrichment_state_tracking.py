@@ -107,7 +107,7 @@ class EnrichmentStateTrackingTests(unittest.TestCase):
         )
 
         params = conn.cursor_obj.executed[0][1]
-        self.assertEqual(params, ("<p>Null HTML</p>", "Null text", 1))
+        self.assertEqual(params, ("<p>Null HTML</p>", "Null text", False, False, 1))
 
     def test_schema_uses_one_time_state_split_migrations(self) -> None:
         conn = FakeConn()

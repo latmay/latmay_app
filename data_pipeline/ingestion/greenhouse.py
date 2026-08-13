@@ -29,6 +29,7 @@ from data_pipeline.ingestion.source_loader import (
     rollback_failed_source_attempt,
     update_source_last_get_at,
 )
+from data_pipeline.ingestion.size_limits import MAX_LISTING_RESPONSE_BYTES, read_response_with_limit
 
 REQUEST_TIMEOUT_SECONDS = 30
 USER_AGENT = "Mozilla/5.0 (compatible; latmay-greenhouse/1.0)"
@@ -142,9 +143,11 @@ def fetch_greenhouse_json(url: str) -> dict[str, Any]:
         url,
         headers={"User-Agent": USER_AGENT, "Accept": "application/json"},
         timeout=REQUEST_TIMEOUT_SECONDS,
+        stream=True,
     )
     log_timing("greenhouse", board_token_from_url(url), "http_get", time.monotonic() - _t)
     response.raise_for_status()
+    read_response_with_limit(response, MAX_LISTING_RESPONSE_BYTES)
     _t = time.monotonic()
     payload = response.json()
     log_timing("greenhouse", board_token_from_url(url), "json_parse", time.monotonic() - _t)
