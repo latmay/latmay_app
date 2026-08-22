@@ -14,7 +14,7 @@ import json
 from datetime import datetime, timezone
 from html import unescape
 from typing import Any, Iterable
-from urllib.parse import urlparse
+from urllib.parse import quote, urlparse
 
 import requests
 
@@ -55,11 +55,37 @@ def sleep_before_request() -> None:
     _last_request_time = time.monotonic()
 
 
+def greenhouse_source(url: str) -> tuple[str, str]:
+    """Return (board token, API endpoint) for a Greenhouse page or API URL."""
+    parsed = urlparse(str(url or "").strip())
+    host = (parsed.hostname or "").lower()
+    parts = [part for part in parsed.path.split("/") if part]
+    if parsed.scheme not in {"http", "https"} or not host:
+        raise ValueError(f"Invalid Greenhouse source URL (expected an absolute URL): {url!r}")
+
+    if host in {"boards.greenhouse.io", "job-boards.greenhouse.io"}:
+        token = parts[0] if parts else ""
+    elif host == "boards-api.greenhouse.io" and len(parts) >= 3 and parts[:2] == ["v1", "boards"]:
+        token = parts[2]
+    else:
+        raise ValueError(
+            "Invalid Greenhouse source URL (expected boards.greenhouse.io/{token}, "
+            "job-boards.greenhouse.io/{token}, or boards-api.greenhouse.io/v1/boards/{token}/jobs): "
+            f"{url!r}"
+        )
+    if not token:
+        raise ValueError(f"Invalid Greenhouse source URL (missing board token): {url!r}")
+
+    endpoint = f"https://boards-api.greenhouse.io/v1/boards/{quote(token, safe='')}/jobs?content=true"
+    return token, endpoint
+
+
 def board_token_from_url(url: str) -> str:
-    parts = urlparse(url).path.strip("/").split("/")
-    if len(parts) >= 4 and parts[1] == "boards":
-        return parts[2]
-    return "unknown"
+    return greenhouse_source(url)[0]
+
+
+def greenhouse_endpoint_from_url(url: str) -> str:
+    return greenhouse_source(url)[1]
 
 
 def strip_html_to_text(html_text: str | None) -> str | None:
@@ -194,7 +220,7 @@ def normalize_job(
 
 
 def collect_jobs_for_source(conn, source_url: str) -> tuple[list[dict[str, Any]], list[str], int, dict[str, Any]]:
-    payload = fetch_greenhouse_json(source_url)
+    payload = fetch_greenhouse_json(greenhouse_endpoint_from_url(source_url))
     jobs = payload.get("jobs", [])
     if not isinstance(jobs, list):
         raise ValueError("Expected Greenhouse payload['jobs'] to be a list.")

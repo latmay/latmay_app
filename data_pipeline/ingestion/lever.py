@@ -14,7 +14,7 @@ import json
 from datetime import datetime, timezone
 from html import unescape
 from typing import Any, Iterable
-from urllib.parse import urlparse
+from urllib.parse import quote, urlparse
 
 import requests
 
@@ -55,11 +55,36 @@ def sleep_before_request() -> None:
     _last_request_time = time.monotonic()
 
 
+def lever_source(url: str) -> tuple[str, str]:
+    """Return (company slug, API endpoint) for a Lever page or API URL."""
+    parsed = urlparse(str(url or "").strip())
+    host = (parsed.hostname or "").lower()
+    parts = [part for part in parsed.path.split("/") if part]
+    if parsed.scheme not in {"http", "https"} or not host:
+        raise ValueError(f"Invalid Lever source URL (expected an absolute URL): {url!r}")
+
+    if host == "jobs.lever.co":
+        slug = parts[0] if parts else ""
+    elif host == "api.lever.co" and len(parts) >= 3 and parts[:2] == ["v0", "postings"]:
+        slug = parts[2]
+    else:
+        raise ValueError(
+            "Invalid Lever source URL (expected jobs.lever.co/{company} or "
+            f"api.lever.co/v0/postings/{{company}}): {url!r}"
+        )
+    if not slug:
+        raise ValueError(f"Invalid Lever source URL (missing company slug): {url!r}")
+
+    endpoint = f"https://api.lever.co/v0/postings/{quote(slug, safe='')}?mode=json"
+    return slug, endpoint
+
+
 def lever_company_slug_from_url(url: str) -> str:
-    parts = urlparse(url).path.strip("/").split("/")
-    if len(parts) >= 3 and parts[1] == "postings":
-        return parts[2]
-    return "unknown"
+    return lever_source(url)[0]
+
+
+def lever_endpoint_from_url(url: str) -> str:
+    return lever_source(url)[1]
 
 
 def strip_html_to_text(html_text: str | None) -> str | None:
@@ -223,7 +248,7 @@ def normalize_job(job: dict[str, Any], source_url: str, fetched_at_utc: datetime
 
 
 def collect_jobs_for_source(conn, source_url: str) -> tuple[list[dict[str, Any]], list[str], int, dict[str, Any]]:
-    jobs = fetch_lever_json(source_url)
+    jobs = fetch_lever_json(lever_endpoint_from_url(source_url))
     fetched_at_utc = utc_now()
     source_company = lever_company_slug_from_url(source_url).rstrip("-")
     existing_fingerprints = existing_fingerprints_for_source(conn, source_company)
